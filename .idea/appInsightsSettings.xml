@@ -22,10 +22,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.mustafa.influencer" />
+                  <option name="mobileSdkAppId" value="1:375882191813:android:5fb86d9a471eaf8817f1ac" />
+                  <option name="projectId" value="myinfluencer-b93c3" />
+                  <option name="projectNumber" value="375882191813" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
