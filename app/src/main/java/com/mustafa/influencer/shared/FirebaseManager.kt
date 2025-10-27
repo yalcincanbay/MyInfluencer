@@ -69,10 +69,72 @@ object FirebaseManager {
 
             val user = User(
                 email = document.getString("email") ?: "",
-                userType = document.getString("userType") ?: ""
+                userType = document.getString("userType") ?: "",
+                profileCompleted = document.getBoolean("profileCompleted") ?: false,
+                platforms = document.get("platforms") as? List<String> ?: emptyList(),
+                platformLinks = document.get("platformLinks") as? Map<String, String> ?: emptyMap(),
+                categories = document.get("categories") as? List<String> ?: emptyList(),
+                bio = document.getString("bio") ?: "",
+                companyName = document.getString("companyName") ?: ""
             )
 
             Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Influencer profil bilgilerini kaydet/güncelle
+    suspend fun saveInfluencerProfile(
+        platforms: List<String>,
+        platformLinks: Map<String, String>,
+        categories: List<String>,
+        bio: String
+    ): Result<Unit> {
+        return try {
+            val userId = getCurrentUserId() ?: throw Exception("Kullanıcı ID'si bulunamadı")
+
+            val profileData = hashMapOf(
+                "platforms" to platforms,
+                "platformLinks" to platformLinks,
+                "categories" to categories,
+                "bio" to bio,
+                "profileCompleted" to true
+            )
+
+            firestore.collection("users")
+                .document(userId)
+                .update(profileData as Map<String, Any>)
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Advertiser profil bilgilerini kaydet/güncelle
+    suspend fun saveAdvertiserProfile(
+        companyName: String,
+        platforms: List<String>,
+        categories: List<String>
+    ): Result<Unit> {
+        return try {
+            val userId = getCurrentUserId() ?: throw Exception("Kullanıcı ID'si bulunamadı")
+
+            val profileData = hashMapOf(
+                "companyName" to companyName,
+                "platforms" to platforms,
+                "categories" to categories,
+                "profileCompleted" to true
+            )
+
+            firestore.collection("users")
+                .document(userId)
+                .update(profileData as Map<String, Any>)
+                .await()
+
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

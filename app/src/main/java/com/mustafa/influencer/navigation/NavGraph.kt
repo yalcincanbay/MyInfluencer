@@ -4,9 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.mustafa.influencer.advertiser.AdvertiserProfileSetupScreen
 import com.mustafa.influencer.advertiser.AdvertiserScreen
 import com.mustafa.influencer.auth.AuthScreen
 import com.mustafa.influencer.influencer.InfluencerScreen
+import com.mustafa.influencer.influencer.ProfileSetupScreen
 
 @Composable
 fun NavGraph(
@@ -20,16 +22,39 @@ fun NavGraph(
         composable(Screen.Auth.route) {
             AuthScreen(
                 onAuthSuccess = { userType ->
-                    // Kullanıcı başarıyla giriş yaptı, userType'a göre yönlendir
+                    // Kullanıcı başarıyla giriş yaptı
+                    // Her iki tip için de ProfileSetup'a git
                     val destination = if (userType == "influencer") {
-                        Screen.Influencer.route
+                        Screen.ProfileSetup.route
                     } else {
-                        Screen.Advertiser.route
+                        Screen.AdvertiserProfileSetup.route
                     }
 
                     // Auth ekranını stack'ten kaldır ve ilgili ekrana git
                     navController.navigate(destination) {
                         popUpTo(Screen.Auth.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.ProfileSetup.route) {
+            ProfileSetupScreen(
+                onSetupComplete = {
+                    // Profil kurulumu tamamlandı, Influencer ekranına git
+                    navController.navigate(Screen.Influencer.route) {
+                        popUpTo(Screen.ProfileSetup.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.AdvertiserProfileSetup.route) {
+            AdvertiserProfileSetupScreen(
+                onSetupComplete = {
+                    // Profil kurulumu tamamlandı, Advertiser ekranına git
+                    navController.navigate(Screen.Advertiser.route) {
+                        popUpTo(Screen.AdvertiserProfileSetup.route) { inclusive = true }
                     }
                 }
             )

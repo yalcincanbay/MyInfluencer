@@ -41,10 +41,23 @@ class MainActivity : ComponentActivity() {
                                 if (userId != null) {
                                     val result = FirebaseManager.getUserData(userId)
                                     result.onSuccess { user ->
-                                        startDestination = if (user.userType == "influencer") {
-                                            Screen.Influencer.route
-                                        } else {
-                                            Screen.Advertiser.route
+                                        startDestination = when {
+                                            user.userType == "influencer" && !user.profileCompleted -> {
+                                                // Influencer ama profil tamamlanmamış -> ProfileSetup
+                                                Screen.ProfileSetup.route
+                                            }
+                                            user.userType == "influencer" -> {
+                                                // Influencer ve profil tamamlanmış -> Influencer ekranı
+                                                Screen.Influencer.route
+                                            }
+                                            user.userType == "advertiser" && !user.profileCompleted -> {
+                                                // Advertiser ama profil tamamlanmamış -> AdvertiserProfileSetup
+                                                Screen.AdvertiserProfileSetup.route
+                                            }
+                                            else -> {
+                                                // Advertiser ve profil tamamlanmış -> Advertiser ekranı
+                                                Screen.Advertiser.route
+                                            }
                                         }
                                     }.onFailure {
                                         startDestination = Screen.Auth.route
