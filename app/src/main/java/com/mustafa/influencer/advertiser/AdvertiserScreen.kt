@@ -2,7 +2,7 @@ package com.mustafa.influencer.advertiser
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,17 +13,18 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvertiserScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onLogout: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Advertiser Panel") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                actions = {
+                    IconButton(onClick = onLogout) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Geri"
+                            imageVector = Icons.Filled.Logout,
+                            contentDescription = "Çıkış Yap"
                         )
                     }
                 }
