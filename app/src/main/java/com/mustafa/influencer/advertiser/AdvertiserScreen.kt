@@ -12,7 +12,10 @@ import androidx.compose.ui.Modifier
 @Composable
 fun AdvertiserScreen(
     onBackClick: () -> Unit,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onInfluencerSearchClick: () -> Unit = {},
+    onCreateCampaignClick: () -> Unit = {},
+    onReportsClick: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -49,7 +52,11 @@ fun AdvertiserScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             when (selectedTab) {
-                0 -> AdvertiserHomeScreen()
+                0 -> AdvertiserHomeScreen(
+                    onInfluencerSearchClick = onInfluencerSearchClick,
+                    onCreateCampaignClick = onCreateCampaignClick,
+                    onReportsClick = onReportsClick
+                )
                 1 -> AdvertiserProfileScreen(onLogout = onLogout)
             }
         }

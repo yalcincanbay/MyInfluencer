@@ -6,6 +6,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.mustafa.influencer.advertiser.AdvertiserProfileSetupScreen
 import com.mustafa.influencer.advertiser.AdvertiserScreen
+import com.mustafa.influencer.advertiser.CreateCampaignScreen
+import com.mustafa.influencer.advertiser.InfluencerSearchScreen
+import com.mustafa.influencer.advertiser.ReportsScreen
 import com.mustafa.influencer.auth.AuthScreen
 import com.mustafa.influencer.influencer.InfluencerScreen
 import com.mustafa.influencer.influencer.ProfileSetupScreen
@@ -95,6 +98,39 @@ fun NavGraph(
                     navController.navigate(Screen.Auth.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onInfluencerSearchClick = {
+                    navController.navigate(Screen.InfluencerSearch.route)
+                },
+                onCreateCampaignClick = {
+                    navController.navigate(Screen.CreateCampaign.route)
+                },
+                onReportsClick = {
+                    navController.navigate(Screen.Reports.route)
+                }
+            )
+        }
+
+        composable(Screen.InfluencerSearch.route) {
+            InfluencerSearchScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.CreateCampaign.route) {
+            CreateCampaignScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.Reports.route) {
+            ReportsScreen(
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

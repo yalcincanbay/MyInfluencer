@@ -7,4 +7,9 @@ sealed class Screen(val route: String) {
     object Home : Screen("home")
     object Influencer : Screen("influencer")
     object Advertiser : Screen("advertiser")
+
+    // Advertiser Sub-screens
+    object InfluencerSearch : Screen("influencer_search")
+    object CreateCampaign : Screen("create_campaign")
+    object Reports : Screen("reports")
 }
