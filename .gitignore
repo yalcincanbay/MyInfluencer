@@ -13,3 +13,20 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firebase config (contains API keys)
+google-services.json
+app/google-services.json
+
+# Gradle files
+.gradle/
+*/build/
+
+# IDE files
+.idea/
+*.iws
+*.ipr
+out/
+
+# Claude Code local settings
+.claude/settings.local.json
