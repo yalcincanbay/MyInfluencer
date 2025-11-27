@@ -10,8 +10,7 @@ import com.mustafa.influencer.advertiser.CreateCampaignScreen
 import com.mustafa.influencer.advertiser.InfluencerSearchScreen
 import com.mustafa.influencer.advertiser.ReportsScreen
 import com.mustafa.influencer.auth.AuthScreen
-import com.mustafa.influencer.influencer.InfluencerScreen
-import com.mustafa.influencer.influencer.ProfileSetupScreen
+import com.mustafa.influencer.influencer.*
 
 @Composable
 fun NavGraph(
@@ -84,6 +83,21 @@ fun NavGraph(
                     navController.navigate(Screen.Auth.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onCampaignSearchClick = {
+                    navController.navigate(Screen.CampaignSearch.route)
+                },
+                onMessagesClick = {
+                    navController.navigate(Screen.Messages.route)
+                },
+                onStatisticsClick = {
+                    navController.navigate(Screen.Statistics.route)
+                },
+                onCampaignClick = { campaignId ->
+                    navController.navigate(Screen.CampaignDetail.createRoute(campaignId))
+                },
+                onAdvertiserClick = { advertiserId ->
+                    navController.navigate(Screen.AdvertiserDetail.createRoute(advertiserId))
                 }
             )
         }
@@ -131,6 +145,62 @@ fun NavGraph(
             ReportsScreen(
                 onBackClick = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.CampaignSearch.route) {
+            CampaignSearchScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onCampaignClick = { campaignId ->
+                    navController.navigate(Screen.CampaignDetail.createRoute(campaignId))
+                }
+            )
+        }
+
+        composable(Screen.Messages.route) {
+            MessagesScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.Statistics.route) {
+            StatisticsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.CampaignDetail.route) { backStackEntry ->
+            val campaignId = backStackEntry.arguments?.getString("campaignId") ?: ""
+            CampaignDetailScreen(
+                campaignId = campaignId,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onMessageClick = {
+                    navController.navigate(Screen.Messages.route)
+                }
+            )
+        }
+
+        composable(Screen.AdvertiserDetail.route) { backStackEntry ->
+            val advertiserId = backStackEntry.arguments?.getString("advertiserId") ?: ""
+            AdvertiserDetailScreen(
+                advertiserId = advertiserId,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onMessageClick = {
+                    navController.navigate(Screen.Messages.route)
+                },
+                onCampaignClick = { campaignId ->
+                    navController.navigate(Screen.CampaignDetail.createRoute(campaignId))
                 }
             )
         }

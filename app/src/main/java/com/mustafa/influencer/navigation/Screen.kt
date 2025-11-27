@@ -12,4 +12,15 @@ sealed class Screen(val route: String) {
     object InfluencerSearch : Screen("influencer_search")
     object CreateCampaign : Screen("create_campaign")
     object Reports : Screen("reports")
+
+    // Influencer Sub-screens
+    object CampaignSearch : Screen("campaign_search")
+    object Messages : Screen("messages")
+    object Statistics : Screen("statistics")
+    object CampaignDetail : Screen("campaign_detail/{campaignId}") {
+        fun createRoute(campaignId: String) = "campaign_detail/$campaignId"
+    }
+    object AdvertiserDetail : Screen("advertiser_detail/{advertiserId}") {
+        fun createRoute(advertiserId: String) = "advertiser_detail/$advertiserId"
+    }
 }

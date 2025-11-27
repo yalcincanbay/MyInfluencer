@@ -12,7 +12,12 @@ import androidx.compose.ui.Modifier
 @Composable
 fun InfluencerScreen(
     onBackClick: () -> Unit,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onCampaignSearchClick: () -> Unit = {},
+    onMessagesClick: () -> Unit = {},
+    onStatisticsClick: () -> Unit = {},
+    onCampaignClick: (String) -> Unit = {},
+    onAdvertiserClick: (String) -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -49,7 +54,13 @@ fun InfluencerScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             when (selectedTab) {
-                0 -> InfluencerHomeScreen()
+                0 -> InfluencerHomeScreen(
+                    onCampaignSearchClick = onCampaignSearchClick,
+                    onMessagesClick = onMessagesClick,
+                    onStatisticsClick = onStatisticsClick,
+                    onCampaignClick = onCampaignClick,
+                    onAdvertiserClick = onAdvertiserClick
+                )
                 1 -> InfluencerProfileScreen(onLogout = onLogout)
             }
         }

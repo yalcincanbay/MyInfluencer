@@ -48,7 +48,13 @@ data class ActiveCampaign(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InfluencerHomeScreen() {
+fun InfluencerHomeScreen(
+    onCampaignSearchClick: () -> Unit = {},
+    onMessagesClick: () -> Unit = {},
+    onStatisticsClick: () -> Unit = {},
+    onCampaignClick: (String) -> Unit = {},
+    onAdvertiserClick: (String) -> Unit = {}
+) {
     // Mock Data
     val stats = listOf(
         StatCard(
@@ -152,7 +158,10 @@ fun InfluencerHomeScreen() {
                 )
             }
             item {
-                ActiveCampaignsSection(activeCampaigns)
+                ActiveCampaignsSection(
+                    campaigns = activeCampaigns,
+                    onCampaignClick = onCampaignClick
+                )
             }
         }
 
@@ -165,12 +174,19 @@ fun InfluencerHomeScreen() {
             )
         }
         item {
-            RecommendedAdvertisersSection(advertisers)
+            RecommendedAdvertisersSection(
+                advertisers = advertisers,
+                onAdvertiserClick = onAdvertiserClick
+            )
         }
 
         // Quick Actions
         item {
-            QuickActionsSection()
+            QuickActionsSection(
+                onCampaignSearchClick = onCampaignSearchClick,
+                onMessagesClick = onMessagesClick,
+                onStatisticsClick = onStatisticsClick
+            )
         }
     }
 }
@@ -338,7 +354,10 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun ActiveCampaignsSection(campaigns: List<ActiveCampaign>) {
+private fun ActiveCampaignsSection(
+    campaigns: List<ActiveCampaign>,
+    onCampaignClick: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -346,21 +365,28 @@ private fun ActiveCampaignsSection(campaigns: List<ActiveCampaign>) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         campaigns.forEach { campaign ->
-            ActiveCampaignCard(campaign)
+            ActiveCampaignCard(
+                campaign = campaign,
+                onClick = { onCampaignClick(campaign.title) }
+            )
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable
-private fun ActiveCampaignCard(campaign: ActiveCampaign) {
+private fun ActiveCampaignCard(
+    campaign: ActiveCampaign,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier
@@ -444,21 +470,30 @@ private fun ActiveCampaignCard(campaign: ActiveCampaign) {
 }
 
 @Composable
-private fun RecommendedAdvertisersSection(advertisers: List<AdvertiserCard>) {
+private fun RecommendedAdvertisersSection(
+    advertisers: List<AdvertiserCard>,
+    onAdvertiserClick: (String) -> Unit
+) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(advertisers) { advertiser ->
-            AdvertiserCardItem(advertiser)
+            AdvertiserCardItem(
+                advertiser = advertiser,
+                onClick = { onAdvertiserClick(advertiser.companyName) }
+            )
         }
     }
     Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
-private fun AdvertiserCardItem(advertiser: AdvertiserCard) {
+private fun AdvertiserCardItem(
+    advertiser: AdvertiserCard,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .width(300.dp)
@@ -467,7 +502,8 @@ private fun AdvertiserCardItem(advertiser: AdvertiserCard) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier
@@ -581,23 +617,23 @@ private fun AdvertiserCardItem(advertiser: AdvertiserCard) {
                         color = Color(0xFF10B981)
                     )
                 }
-                FilledTonalButton(
-                    onClick = { },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Text("İncele")
-                }
+                Text(
+                    text = "İncele",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
 }
 
 @Composable
-private fun QuickActionsSection() {
+private fun QuickActionsSection(
+    onCampaignSearchClick: () -> Unit,
+    onMessagesClick: () -> Unit,
+    onStatisticsClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -618,19 +654,22 @@ private fun QuickActionsSection() {
                 title = "Kampanya Ara",
                 icon = Icons.Default.Search,
                 color = Color(0xFF6366F1),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onCampaignSearchClick
             )
             QuickActionCard(
                 title = "Mesajlar",
                 icon = Icons.Default.Message,
                 color = Color(0xFF8B5CF6),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onMessagesClick
             )
             QuickActionCard(
                 title = "İstatistikler",
                 icon = Icons.Default.BarChart,
                 color = Color(0xFF10B981),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onStatisticsClick
             )
         }
     }
@@ -641,14 +680,16 @@ private fun QuickActionCard(
     title: String,
     icon: ImageVector,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier.height(90.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = 0.1f)
-        )
+        ),
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier
