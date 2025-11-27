@@ -28,5 +28,3 @@ app/google-services.json
 *.ipr
 out/
 
-# Local settings
-.claude/
