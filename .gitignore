@@ -24,5 +24,3 @@ local.properties
 *.ipr
 out/
 
-# Local settings
-.claude/
