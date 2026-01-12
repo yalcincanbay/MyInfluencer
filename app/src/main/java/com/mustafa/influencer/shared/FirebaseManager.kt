@@ -10,62 +10,70 @@ object FirebaseManager {
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
-    // Kullanıcı girişli mi kontrol et
-    fun isUserLoggedIn(): Boolean {
-        return auth.currentUser != null
-    }
+    private const val USERS = "users"
 
-    // Mevcut kullanıcının ID'sini al
-    fun getCurrentUserId(): String? {
-        return auth.currentUser?.uid
-    }
+    fun isUserLoggedIn(): Boolean = auth.currentUser != null
+    fun getCurrentUserId(): String? = auth.currentUser?.uid
+    fun signOut() = auth.signOut()
 
-    // E-posta ile kayıt
     suspend fun signUpWithEmail(
         email: String,
         password: String,
         userType: String
     ): Result<String> {
         return try {
-            // Firebase Authentication ile kullanıcı oluştur
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
-            val userId = authResult.user?.uid ?: throw Exception("User ID alınamadı")
+            val userId = authResult.user?.uid ?: error("User ID alınamadı")
 
-            // Firestore'a kullanıcı verilerini kaydet (minimal veri)
-            val user = hashMapOf(
+            // Yeni kullanıcı dokümanı - profileCompleted false başlasın
+            val userMap = hashMapOf(
                 "email" to email,
-                "userType" to userType
+                "userType" to userType,
+                "profileCompleted" to false,
+                "platforms" to emptyList<String>(),
+                "platformLinks" to emptyMap<String, String>(),
+                "categories" to emptyList<String>(),
+                "bio" to "",
+                "companyName" to ""
             )
 
-            firestore.collection("users")
-                .document(userId)
-                .set(user)
-                .await()
-
+            firestore.collection(USERS).document(userId).set(userMap).await()
             Result.success(userId)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // E-posta ile giriş
     suspend fun signInWithEmail(email: String, password: String): Result<String> {
         return try {
             val authResult = auth.signInWithEmailAndPassword(email, password).await()
-            val userId = authResult.user?.uid ?: throw Exception("User ID alınamadı")
+            val userId = authResult.user?.uid ?: error("User ID alınamadı")
+
+            // Eğer users dokümanı yoksa (nadiren olur) oluştur
+            ensureUserDocumentExists(userId, email)
+
             Result.success(userId)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Kullanıcı verilerini getir
+    private suspend fun ensureUserDocumentExists(userId: String, email: String) {
+        val doc = firestore.collection(USERS).document(userId).get().await()
+        if (!doc.exists()) {
+            val fallback = hashMapOf(
+                "email" to email,
+                "userType" to "influencer", // default; istersen "unknown" yap
+                "profileCompleted" to false
+            )
+            firestore.collection(USERS).document(userId).set(fallback).await()
+        }
+    }
+
     suspend fun getUserData(userId: String): Result<User> {
         return try {
-            val document = firestore.collection("users")
-                .document(userId)
-                .get()
-                .await()
+            val document = firestore.collection(USERS).document(userId).get().await()
+            if (!document.exists()) error("Kullanıcı bulunamadı (users/$userId)")
 
             val user = User(
                 email = document.getString("email") ?: "",
@@ -84,7 +92,6 @@ object FirebaseManager {
         }
     }
 
-    // Influencer profil bilgilerini kaydet/güncelle
     suspend fun saveInfluencerProfile(
         platforms: List<String>,
         platformLinks: Map<String, String>,
@@ -92,9 +99,9 @@ object FirebaseManager {
         bio: String
     ): Result<Unit> {
         return try {
-            val userId = getCurrentUserId() ?: throw Exception("Kullanıcı ID'si bulunamadı")
+            val userId = getCurrentUserId() ?: error("Kullanıcı ID'si bulunamadı")
 
-            val profileData = hashMapOf(
+            val updateMap = hashMapOf<String, Any>(
                 "platforms" to platforms,
                 "platformLinks" to platformLinks,
                 "categories" to categories,
@@ -102,62 +109,30 @@ object FirebaseManager {
                 "profileCompleted" to true
             )
 
-            firestore.collection("users")
-                .document(userId)
-                .update(profileData as Map<String, Any>)
-                .await()
-
+            firestore.collection(USERS).document(userId).update(updateMap).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Advertiser profil bilgilerini kaydet/güncelle
     suspend fun saveAdvertiserProfile(
         companyName: String,
         platforms: List<String>,
         categories: List<String>
     ): Result<Unit> {
         return try {
-            val userId = getCurrentUserId() ?: throw Exception("Kullanıcı ID'si bulunamadı")
+            val userId = getCurrentUserId() ?: error("Kullanıcı ID'si bulunamadı")
 
-            val profileData = hashMapOf(
+            val updateMap = hashMapOf<String, Any>(
                 "companyName" to companyName,
                 "platforms" to platforms,
                 "categories" to categories,
                 "profileCompleted" to true
             )
 
-            firestore.collection("users")
-                .document(userId)
-                .update(profileData as Map<String, Any>)
-                .await()
-
+            firestore.collection(USERS).document(userId).update(updateMap).await()
             Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    // Çıkış yap
-    fun signOut() {
-        auth.signOut()
-    }
-
-    // Test fonksiyonu (eski kod)
-    suspend fun saveText(text: String): Result<String> {
-        return try {
-            val data = hashMapOf(
-                "text" to text,
-                "timestamp" to System.currentTimeMillis()
-            )
-
-            val documentRef = firestore.collection("test_collection")
-                .add(data)
-                .await()
-
-            Result.success(documentRef.id)
         } catch (e: Exception) {
             Result.failure(e)
         }

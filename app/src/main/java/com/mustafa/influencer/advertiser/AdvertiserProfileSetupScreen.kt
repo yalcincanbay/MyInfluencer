@@ -9,21 +9,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mustafa.influencer.shared.FirebaseManager
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvertiserProfileSetupScreen(
     onSetupComplete: () -> Unit
 ) {
-    var companyName by remember { mutableStateOf("") }
-    var selectedPlatforms by remember { mutableStateOf(setOf<String>()) }
-    var selectedCategories by remember { mutableStateOf(setOf<String>()) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-
-    val scope = rememberCoroutineScope()
+    val viewModel = remember { AdvertiserProfileSetupViewModel() }
+    val uiState by viewModel.state.collectAsState()
 
     val availablePlatforms = listOf("YouTube", "TikTok", "Instagram", "Twitter", "Facebook")
     val availableCategories = listOf(
@@ -32,12 +25,9 @@ fun AdvertiserProfileSetupScreen(
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Şirket Profili Kurulumu") }
-            )
-        }
+        topBar = { TopAppBar(title = { Text("Şirket Profili Kurulumu") }) }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -61,7 +51,6 @@ fun AdvertiserProfileSetupScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
             )
 
-            // Şirket İsmi
             Text(
                 text = "Şirketinizin İsmi *",
                 style = MaterialTheme.typography.titleMedium,
@@ -70,8 +59,8 @@ fun AdvertiserProfileSetupScreen(
             )
 
             OutlinedTextField(
-                value = companyName,
-                onValueChange = { companyName = it },
+                value = uiState.companyName,
+                onValueChange = viewModel::setCompanyName,
                 label = { Text("Şirket İsmi") },
                 placeholder = { Text("Örn: ABC Teknoloji A.Ş.") },
                 modifier = Modifier.fillMaxWidth(),
@@ -80,7 +69,6 @@ fun AdvertiserProfileSetupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Platformlar Seçimi
             Text(
                 text = "Hangi platformlarda reklam vermek istiyorsunuz? *",
                 style = MaterialTheme.typography.titleMedium,
@@ -89,19 +77,14 @@ fun AdvertiserProfileSetupScreen(
             )
 
             availablePlatforms.forEach { platform ->
+                val key = platform.lowercase()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(
-                        checked = selectedPlatforms.contains(platform.lowercase()),
-                        onCheckedChange = { checked ->
-                            selectedPlatforms = if (checked) {
-                                selectedPlatforms + platform.lowercase()
-                            } else {
-                                selectedPlatforms - platform.lowercase()
-                            }
-                        }
+                        checked = uiState.selectedPlatforms.contains(key),
+                        onCheckedChange = { viewModel.togglePlatform(key) }
                     )
                     Text(platform)
                 }
@@ -109,7 +92,6 @@ fun AdvertiserProfileSetupScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // İçerik Kategorileri
             Text(
                 text = "Hangi alanlarda reklam vermek istiyorsunuz? *",
                 style = MaterialTheme.typography.titleMedium,
@@ -117,38 +99,28 @@ fun AdvertiserProfileSetupScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // Kategoriler için grid yapı
             availableCategories.chunked(2).forEach { rowCategories ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     rowCategories.forEach { category ->
+                        val key = category.lowercase()
                         FilterChip(
-                            selected = selectedCategories.contains(category.lowercase()),
-                            onClick = {
-                                selectedCategories = if (selectedCategories.contains(category.lowercase())) {
-                                    selectedCategories - category.lowercase()
-                                } else {
-                                    selectedCategories + category.lowercase()
-                                }
-                            },
+                            selected = uiState.selectedCategories.contains(key),
+                            onClick = { viewModel.toggleCategory(key) },
                             label = { Text(category) },
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    // Eğer tek eleman varsa boş alan ekle
-                    if (rowCategories.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    if (rowCategories.size == 1) Spacer(modifier = Modifier.weight(1f))
                 }
             }
 
-            // Hata mesajı
-            if (errorMessage.isNotEmpty()) {
+            if (uiState.errorMessage.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = errorMessage,
+                    text = uiState.errorMessage,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -156,49 +128,12 @@ fun AdvertiserProfileSetupScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Kaydet Butonu
             Button(
-                onClick = {
-                    when {
-                        companyName.isBlank() -> {
-                            errorMessage = "Lütfen şirket ismini girin"
-                            return@Button
-                        }
-                        selectedPlatforms.isEmpty() -> {
-                            errorMessage = "Lütfen en az bir platform seçin"
-                            return@Button
-                        }
-                        selectedCategories.isEmpty() -> {
-                            errorMessage = "Lütfen en az bir alan seçin"
-                            return@Button
-                        }
-                    }
-
-                    isLoading = true
-                    errorMessage = ""
-
-                    scope.launch {
-                        val result = FirebaseManager.saveAdvertiserProfile(
-                            companyName = companyName,
-                            platforms = selectedPlatforms.toList(),
-                            categories = selectedCategories.toList()
-                        )
-
-                        isLoading = false
-
-                        result.onSuccess {
-                            onSetupComplete()
-                        }.onFailure { exception ->
-                            errorMessage = exception.message ?: "Profil kaydedilemedi"
-                        }
-                    }
-                },
-                enabled = !isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
+                onClick = { viewModel.submit(onSuccess = onSetupComplete) },
+                enabled = !uiState.isLoading,
+                modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
-                if (isLoading) {
+                if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
