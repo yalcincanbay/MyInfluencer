@@ -14,61 +14,70 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.mustafa.influencer.shared.FirebaseManager
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mustafa.influencer.domain.model.UserType
 
 @Composable
 fun AuthScreen(
-    onAuthSuccess: () -> Unit
+    onAuthSuccess: () -> Unit,
+    vm: AuthViewModel = viewModel()
 ) {
-    var currentStep by remember { mutableStateOf(1) } // 1: tip seçimi, 2: email/pass
-    var selectedUserType by remember { mutableStateOf("") }
+    val state by vm.state.collectAsState()
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var isLogin by remember { mutableStateOf(true) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf("") }
-
-    val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (currentStep == 1) {
-            Text("Hoş Geldiniz", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        if (state.currentStep == 1) {
             Text(
-                "Hesap tipinizi seçin",
+                text = "Hoş Geldiniz",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Hesap tipinizi seçin",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
             )
 
             Button(
-                onClick = { selectedUserType = "influencer"; currentStep = 2 },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                onClick = { vm.selectUserType(UserType.INFLUENCER) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) { Text("Influencer") }
 
             Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = { selectedUserType = "advertiser"; currentStep = 2 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                onClick = { vm.selectUserType(UserType.ADVERTISER) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
             ) { Text("Advertiser (Reklam Veren)") }
 
         } else {
             Text(
-                text = if (isLogin) "Giriş Yap" else "Kayıt Ol",
+                text = if (state.isLogin) "Giriş Yap" else "Kayıt Ol",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = if (selectedUserType == "influencer") "Influencer" else "Advertiser",
+                text = when (state.selectedUserType) {
+                    UserType.INFLUENCER -> "Influencer"
+                    UserType.ADVERTISER -> "Advertiser"
+                    else -> ""
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,
@@ -76,8 +85,8 @@ fun AuthScreen(
             )
 
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
+                value = state.email,
+                onValueChange = vm::setEmail,
                 label = { Text("E-posta") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
@@ -87,8 +96,8 @@ fun AuthScreen(
             Spacer(Modifier.height(16.dp))
 
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = state.password,
+                onValueChange = vm::setPassword,
                 label = { Text("Şifre") },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -104,65 +113,46 @@ fun AuthScreen(
                 singleLine = true
             )
 
-            if (errorMessage.isNotEmpty()) {
+            if (state.errorMessage.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = state.errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    if (email.isBlank() || password.isBlank()) {
-                        errorMessage = "Lütfen tüm alanları doldurun"
-                        return@Button
-                    }
-
-                    isLoading = true
-                    errorMessage = ""
-
-                    scope.launch {
-                        val result = if (isLogin) {
-                            FirebaseManager.signInWithEmail(email, password)
-                        } else {
-                            if (selectedUserType.isBlank()) {
-                                isLoading = false
-                                errorMessage = "Kullanıcı tipi seçilmedi"
-                                return@launch
-                            }
-                            FirebaseManager.signUpWithEmail(email, password, selectedUserType)
-                        }
-
-                        isLoading = false
-
-                        result.onSuccess {
-                            onAuthSuccess()
-                        }.onFailure { ex ->
-                            errorMessage = ex.message ?: "Bir hata oluştu"
-                        }
+                    // router ile çözüyoruz; AuthSuccess olunca LoadingRouter'a gideceğiz
+                    vm.submit {
+                        onAuthSuccess()
                     }
                 },
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                enabled = !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                else Text(if (isLogin) "Giriş Yap" else "Kayıt Ol")
+                if (state.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text(if (state.isLogin) "Giriş Yap" else "Kayıt Ol")
+                }
             }
 
             Spacer(Modifier.height(16.dp))
 
-            TextButton(onClick = { isLogin = !isLogin; errorMessage = "" }) {
-                Text(if (isLogin) "Hesabınız yok mu? Kayıt olun" else "Zaten hesabınız var mı? Giriş yapın")
+            TextButton(onClick = vm::toggleLogin) {
+                Text(if (state.isLogin) "Hesabınız yok mu? Kayıt olun" else "Zaten hesabınız var mı? Giriş yapın")
             }
 
-            TextButton(
-                onClick = {
-                    currentStep = 1
-                    email = ""
-                    password = ""
-                    errorMessage = ""
-                }
-            ) { Text("← Geri") }
+            TextButton(onClick = vm::goBack) {
+                Text("← Geri")
+            }
         }
     }
 }

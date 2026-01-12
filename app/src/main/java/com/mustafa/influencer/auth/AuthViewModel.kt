@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mustafa.influencer.data.repository.UserRepositoryImpl
 import com.mustafa.influencer.domain.model.UserType
 import com.mustafa.influencer.domain.repository.UserRepository
+import com.mustafa.influencer.navigation.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,7 +57,7 @@ class AuthViewModel(
         )
     }
 
-    fun submit(onNextRoute: (String) -> Unit) {
+    fun submit(onSuccess: () -> Unit) {
         val s = _state.value
         val type = s.selectedUserType
 
@@ -72,36 +73,18 @@ class AuthViewModel(
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, errorMessage = "")
 
-            // 1) Auth
-            val authRes: Result<String> = runCatching {
+            runCatching {
                 if (s.isLogin) repo.signIn(s.email, s.password)
                 else repo.signUp(s.email, s.password, type)
-            }
-
-            authRes.onFailure { e ->
+            }.onSuccess {
+                _state.value = _state.value.copy(isLoading = false)
+                onSuccess() // sadece başarı bildir
+            }.onFailure { e ->
                 _state.value = _state.value.copy(
                     isLoading = false,
                     errorMessage = mapAuthError(e)
                 )
-                return@launch
             }
-
-            // 2) Route
-            val nextRoute: String = runCatching {
-                val uid = repo.currentUserId() ?: return@runCatching Screen.Auth.route
-                val user = repo.getUser(uid)
-
-                when {
-                    user.userType == "influencer" && !user.profileCompleted -> Screen.ProfileSetup.route
-                    user.userType == "influencer" -> Screen.Influencer.route
-                    user.userType == "advertiser" && !user.profileCompleted -> Screen.AdvertiserProfileSetup.route
-                    user.userType == "advertiser" -> Screen.Advertiser.route
-                    else -> Screen.Auth.route
-                }
-            }.getOrElse { Screen.Auth.route }
-
-            _state.value = _state.value.copy(isLoading = false)
-            onNextRoute(nextRoute)
         }
     }
 

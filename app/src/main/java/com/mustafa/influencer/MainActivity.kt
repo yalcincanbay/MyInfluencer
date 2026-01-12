@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.mustafa.influencer.navigation.NavGraph
+import com.mustafa.influencer.navigation.Screen
 import com.mustafa.influencer.ui.theme.InfluencerTheme
 
 class MainActivity : ComponentActivity() {

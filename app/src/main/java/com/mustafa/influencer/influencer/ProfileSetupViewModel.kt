@@ -30,9 +30,8 @@ class ProfileSetupViewModel(
     fun togglePlatform(platformLower: String) {
         val s = _state.value
         _state.value = s.copy(
-            selectedPlatforms = if (s.selectedPlatforms.contains(platformLower)) {
-                s.selectedPlatforms - platformLower
-            } else s.selectedPlatforms + platformLower,
+            selectedPlatforms = if (s.selectedPlatforms.contains(platformLower)) s.selectedPlatforms - platformLower
+            else s.selectedPlatforms + platformLower,
             errorMessage = ""
         )
     }
@@ -40,9 +39,8 @@ class ProfileSetupViewModel(
     fun toggleCategory(categoryLower: String) {
         val s = _state.value
         _state.value = s.copy(
-            selectedCategories = if (s.selectedCategories.contains(categoryLower)) {
-                s.selectedCategories - categoryLower
-            } else s.selectedCategories + categoryLower,
+            selectedCategories = if (s.selectedCategories.contains(categoryLower)) s.selectedCategories - categoryLower
+            else s.selectedCategories + categoryLower,
             errorMessage = ""
         )
     }

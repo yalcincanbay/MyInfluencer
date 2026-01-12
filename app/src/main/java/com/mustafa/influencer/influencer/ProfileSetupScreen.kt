@@ -9,14 +9,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileSetupScreen(
-    onSetupComplete: () -> Unit
+    onSetupComplete: () -> Unit,
+    vm: ProfileSetupViewModel = viewModel()
 ) {
-    val viewModel = remember { ProfileSetupViewModel() }
-    val uiState by viewModel.state.collectAsState()
+    val uiState by vm.state.collectAsState()
 
     val availablePlatforms = listOf("YouTube", "TikTok", "Instagram", "Twitter", "Facebook")
     val availableCategories = listOf(
@@ -66,7 +67,7 @@ fun ProfileSetupScreen(
                 ) {
                     Checkbox(
                         checked = uiState.selectedPlatforms.contains(key),
-                        onCheckedChange = { viewModel.togglePlatform(key) }
+                        onCheckedChange = { vm.togglePlatform(key) }
                     )
                     Text(platform)
                 }
@@ -85,9 +86,11 @@ fun ProfileSetupScreen(
                 if (uiState.selectedPlatforms.contains("youtube")) {
                     OutlinedTextField(
                         value = uiState.youtubeLink,
-                        onValueChange = viewModel::setYoutube,
+                        onValueChange = vm::setYoutube,
                         label = { Text("YouTube Kanal Linki") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                         singleLine = true
                     )
                 }
@@ -95,9 +98,11 @@ fun ProfileSetupScreen(
                 if (uiState.selectedPlatforms.contains("tiktok")) {
                     OutlinedTextField(
                         value = uiState.tiktokLink,
-                        onValueChange = viewModel::setTiktok,
+                        onValueChange = vm::setTiktok,
                         label = { Text("TikTok Profil Linki") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                         singleLine = true
                     )
                 }
@@ -105,9 +110,11 @@ fun ProfileSetupScreen(
                 if (uiState.selectedPlatforms.contains("instagram")) {
                     OutlinedTextField(
                         value = uiState.instagramLink,
-                        onValueChange = viewModel::setInstagram,
+                        onValueChange = vm::setInstagram,
                         label = { Text("Instagram Profil Linki") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                         singleLine = true
                     )
                 }
@@ -131,7 +138,7 @@ fun ProfileSetupScreen(
                         val key = category.lowercase()
                         FilterChip(
                             selected = uiState.selectedCategories.contains(key),
-                            onClick = { viewModel.toggleCategory(key) },
+                            onClick = { vm.toggleCategory(key) },
                             label = { Text(category) },
                             modifier = Modifier.weight(1f)
                         )
@@ -151,9 +158,11 @@ fun ProfileSetupScreen(
 
             OutlinedTextField(
                 value = uiState.bio,
-                onValueChange = viewModel::setBio,
+                onValueChange = vm::setBio,
                 label = { Text("Kendinizi tanıtın") },
-                modifier = Modifier.fillMaxWidth().height(120.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
                 maxLines = 5,
                 placeholder = { Text("Örn: Spor ve sağlıklı yaşam üzerine içerikler üretiyorum...") }
             )
@@ -170,9 +179,11 @@ fun ProfileSetupScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { viewModel.submit(withLinks = true, onSuccess = onSetupComplete) },
+                onClick = { vm.submit(withLinks = true, onSuccess = onSetupComplete) },
                 enabled = !uiState.isLoading,
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
@@ -185,7 +196,7 @@ fun ProfileSetupScreen(
             }
 
             TextButton(
-                onClick = { viewModel.submit(withLinks = false, onSuccess = onSetupComplete) },
+                onClick = { vm.submit(withLinks = false, onSuccess = onSetupComplete) },
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth()
             ) {
