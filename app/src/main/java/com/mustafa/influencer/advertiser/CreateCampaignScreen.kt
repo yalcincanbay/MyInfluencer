@@ -13,18 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateCampaignScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    vm: CreateCampaignViewModel = viewModel()
 ) {
-    var campaignTitle by remember { mutableStateOf("") }
-    var campaignDescription by remember { mutableStateOf("") }
-    var budget by remember { mutableStateOf("") }
-    var selectedPlatform by remember { mutableStateOf("Instagram") }
-    var selectedCategory by remember { mutableStateOf("Teknoloji") }
-    var deadline by remember { mutableStateOf("") }
+    val ui by vm.state.collectAsState()
 
     val platforms = listOf("Instagram", "YouTube", "TikTok", "Twitch", "Twitter")
     val categories = listOf("Teknoloji", "Oyun", "Makyaj", "Spor", "Yemek", "Moda", "Seyahat", "Eğitim")
@@ -99,16 +96,38 @@ fun CreateCampaignScreen(
                 }
             }
 
+            // Hata / Başarı mesajı
+            item {
+                Column {
+                    if (ui.errorMessage.isNotBlank()) {
+                        Text(
+                            text = ui.errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    if (ui.successMessage.isNotBlank()) {
+                        Text(
+                            text = ui.successMessage,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+
             // Campaign Title
             item {
                 FormSection(title = "Kampanya Başlığı", icon = Icons.Default.Title) {
                     OutlinedTextField(
-                        value = campaignTitle,
-                        onValueChange = { campaignTitle = it },
+                        value = ui.title,
+                        onValueChange = vm::setTitle,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Örn: Yeni Ürün Lansmanı 2024") },
                         shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = !ui.isLoading
                     )
                 }
             }
@@ -117,14 +136,15 @@ fun CreateCampaignScreen(
             item {
                 FormSection(title = "Kampanya Açıklaması", icon = Icons.Default.Description) {
                     OutlinedTextField(
-                        value = campaignDescription,
-                        onValueChange = { campaignDescription = it },
+                        value = ui.description,
+                        onValueChange = vm::setDescription,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
                         placeholder = { Text("Kampanyanızın detaylarını yazın...") },
                         shape = RoundedCornerShape(12.dp),
-                        maxLines = 5
+                        maxLines = 5,
+                        enabled = !ui.isLoading
                     )
                 }
             }
@@ -150,8 +170,8 @@ fun CreateCampaignScreen(
                                 ) {
                                     row.forEach { platform ->
                                         FilterChip(
-                                            selected = selectedPlatform == platform,
-                                            onClick = { selectedPlatform = platform },
+                                            selected = ui.platform == platform,
+                                            onClick = { vm.setPlatform(platform) },
                                             label = {
                                                 Text(
                                                     text = platform,
@@ -162,8 +182,12 @@ fun CreateCampaignScreen(
                                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                                 selectedLabelColor = Color.White
                                             ),
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier.weight(1f),
+                                            enabled = !ui.isLoading
                                         )
+                                    }
+                                    if (row.size < 3) {
+                                        repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                                     }
                                 }
                             }
@@ -193,8 +217,8 @@ fun CreateCampaignScreen(
                                 ) {
                                     row.forEach { category ->
                                         FilterChip(
-                                            selected = selectedCategory == category,
-                                            onClick = { selectedCategory = category },
+                                            selected = ui.category == category,
+                                            onClick = { vm.setCategory(category) },
                                             label = {
                                                 Text(
                                                     text = category,
@@ -205,8 +229,12 @@ fun CreateCampaignScreen(
                                                 selectedContainerColor = Color(0xFF8B5CF6),
                                                 selectedLabelColor = Color.White
                                             ),
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier.weight(1f),
+                                            enabled = !ui.isLoading
                                         )
+                                    }
+                                    if (row.size < 3) {
+                                        repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
                                     }
                                 }
                             }
@@ -219,8 +247,8 @@ fun CreateCampaignScreen(
             item {
                 FormSection(title = "Bütçe", icon = Icons.Default.Payments) {
                     OutlinedTextField(
-                        value = budget,
-                        onValueChange = { budget = it },
+                        value = ui.budgetText,
+                        onValueChange = vm::setBudgetText,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Örn: 25000") },
                         leadingIcon = {
@@ -232,7 +260,8 @@ fun CreateCampaignScreen(
                             )
                         },
                         shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = !ui.isLoading
                     )
                 }
             }
@@ -241,17 +270,18 @@ fun CreateCampaignScreen(
             item {
                 FormSection(title = "Son Başvuru Tarihi", icon = Icons.Default.CalendarMonth) {
                     OutlinedTextField(
-                        value = deadline,
-                        onValueChange = { deadline = it },
+                        value = ui.deadlineText,
+                        onValueChange = vm::setDeadlineText,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Örn: 15 gün") },
                         shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                        singleLine = true,
+                        enabled = !ui.isLoading
                     )
                 }
             }
 
-            // Requirements Section
+            // Requirements Section (şimdilik UI statik)
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -289,10 +319,11 @@ fun CreateCampaignScreen(
                 }
             }
 
-            // Create Campaign Button
+            // Create Campaign Button (active)
             item {
                 Button(
-                    onClick = { /* Create campaign */ },
+                    onClick = { vm.create(status = "active", onDone = onBackClick) },
+                    enabled = !ui.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -302,24 +333,32 @@ fun CreateCampaignScreen(
                         contentColor = Color.White
                     )
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Kampanyayı Oluştur",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (ui.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = Color.White
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Kampanyayı Oluştur",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
-            // Save as Draft Button
+            // Save as Draft Button (draft)
             item {
                 OutlinedButton(
-                    onClick = { /* Save draft */ },
+                    onClick = { vm.create(status = "draft", onDone = onBackClick) },
+                    enabled = !ui.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
