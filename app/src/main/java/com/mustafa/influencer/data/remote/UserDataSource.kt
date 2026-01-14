@@ -3,40 +3,34 @@ package com.mustafa.influencer.data.remote
 import com.google.firebase.firestore.FirebaseFirestore
 import com.mustafa.influencer.data.User
 import com.mustafa.influencer.domain.model.UserType
-import com.mustafa.influencer.shared.bool
-import com.mustafa.influencer.shared.string
-import com.mustafa.influencer.shared.stringList
-import com.mustafa.influencer.shared.stringMap
 import kotlinx.coroutines.tasks.await
 
-class UserDataSource(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-) {
-    private val users = firestore.collection("users")
+class UserDataSource {
+    private val db = FirebaseFirestore.getInstance()
+    private val usersCollection = db.collection("users")
 
-    suspend fun createMinimalUser(userId: String, email: String, userType: UserType) {
-        val data = mapOf(
-            "email" to email,
-            "userType" to userType.name,
-            "profileCompleted" to false
+    suspend fun createMinimalUser(uid: String, email: String, userType: UserType) {
+        // Yeni User modeline uygun obje oluşturuyoruz
+        val user = User(
+            id = uid,
+            email = email,
+            userType = userType.name.lowercase(), // Enum'ı string'e çeviriyoruz
+            profileCompleted = false,
+            createdAt = System.currentTimeMillis(),
+            name = "", // Başlangıçta boş
+            followerCount = "",
+            priceRange = ""
         )
-        users.document(userId).set(data).await()
+        usersCollection.document(uid).set(user).await()
     }
 
     suspend fun getUser(userId: String): User {
-        val doc = users.document(userId).get().await()
-        if (!doc.exists()) error("Kullanıcı bulunamadı")
+        val snapshot = usersCollection.document(userId).get().await()
+        // Firestore verisini User sınıfına dönüştür
+        val user = snapshot.toObject(User::class.java) ?: error("Kullanıcı bulunamadı")
 
-        return User(
-            email = doc.string("email"),
-            userType = doc.string("userType"),
-            profileCompleted = doc.bool("profileCompleted"),
-            platforms = doc.stringList("platforms"),
-            platformLinks = doc.stringMap("platformLinks"),
-            categories = doc.stringList("categories"),
-            bio = doc.string("bio"),
-            companyName = doc.string("companyName")
-        )
+        // Eğer ID boş gelirse (eski kayıtlarda olabilir), doküman ID'sini ata
+        return if (user.id.isEmpty()) user.copy(id = snapshot.id) else user
     }
 
     suspend fun updateInfluencerProfile(
@@ -46,14 +40,14 @@ class UserDataSource(
         categories: List<String>,
         bio: String
     ) {
-        val profileData = mapOf(
+        val updates = mapOf(
             "platforms" to platforms,
             "platformLinks" to platformLinks,
             "categories" to categories,
             "bio" to bio,
             "profileCompleted" to true
         )
-        users.document(userId).update(profileData).await()
+        usersCollection.document(userId).update(updates).await()
     }
 
     suspend fun updateAdvertiserProfile(
@@ -62,12 +56,27 @@ class UserDataSource(
         platforms: List<String>,
         categories: List<String>
     ) {
-        val profileData = mapOf(
+        val updates = mapOf(
             "companyName" to companyName,
             "platforms" to platforms,
             "categories" to categories,
             "profileCompleted" to true
         )
-        users.document(userId).update(profileData).await()
+        usersCollection.document(userId).update(updates).await()
+    }
+
+    // Arama ekranı için tüm influencerları getirir
+    suspend fun getAllInfluencers(): List<User> {
+        return try {
+            val snapshot = usersCollection
+                .whereEqualTo("userType", "influencer")
+                .get()
+                .await()
+
+            snapshot.toObjects(User::class.java)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 }

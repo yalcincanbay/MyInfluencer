@@ -30,6 +30,11 @@ class UserRepositoryImpl(
 
     override suspend fun getUser(userId: String): User = ds.getUser(userId)
 
+    // --- YENİ EKLENEN IMPLEMENTASYON ---
+    override suspend fun getAllInfluencers(): List<User> {
+        return ds.getAllInfluencers()
+    }
+
     override suspend fun saveInfluencerProfile(
         userId: String,
         platforms: List<String>,
