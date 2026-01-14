@@ -6,6 +6,7 @@ import com.mustafa.influencer.domain.repository.CampaignRepository
 import com.mustafa.influencer.shared.FirebaseManager
 
 class CampaignRepositoryImpl(
+    // DataSource otomatik initialize edilir
     private val ds: CampaignDataSource = CampaignDataSource()
 ) : CampaignRepository {
 
@@ -22,12 +23,12 @@ class CampaignRepositoryImpl(
         deadlineText: String,
         status: String
     ): String {
-        val uid = FirebaseManager.getCurrentUserId() ?: error("Oturum bulunamadı")
+        // Kullanıcı ID'sini kontrol et
+        val uid = FirebaseManager.getCurrentUserId() ?: throw IllegalStateException("Kullanıcı oturumu açık değil")
 
-        // İstersen advertiserName’i kullanıcı doc’undan çekip doldururuz (şimdilik boş da olur)
         val data = mapOf(
             "advertiserId" to uid,
-            "advertiserName" to "", // sonra dolduracağız
+            "advertiserName" to "", // İleride kullanıcı profilinden çekilebilir
             "title" to title.trim(),
             "description" to description.trim(),
             "platform" to platform,

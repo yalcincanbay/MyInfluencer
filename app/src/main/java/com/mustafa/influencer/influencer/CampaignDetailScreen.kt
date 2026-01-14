@@ -3,7 +3,6 @@ package com.mustafa.influencer.influencer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,91 +17,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
-// Mock Data Models
-data class CampaignDetail(
-    val title: String,
-    val advertiser: String,
-    val status: String,
-    val description: String,
-    val budget: String,
-    val deadline: String,
-    val platforms: List<String>,
-    val requirements: List<String>,
-    val deliverables: List<String>,
-    val progress: Float
-)
-
-data class Milestone(
-    val title: String,
-    val date: String,
-    val isCompleted: Boolean,
-    val description: String
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mustafa.influencer.domain.model.Campaign
+import com.mustafa.influencer.domain.model.Milestone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CampaignDetailScreen(
     campaignId: String,
     onBackClick: () -> Unit,
-    onMessageClick: () -> Unit = {}
+    onMessageClick: () -> Unit = {},
+    vm: CampaignDetailViewModel = viewModel()
 ) {
-    // Mock Campaign Detail
-    val campaign = CampaignDetail(
-        title = "Yeni Telefon İncelemesi",
-        advertiser = "TechVision A.Ş.",
-        status = "Devam Ediyor",
-        description = "Yeni flagship telefonumuz için detaylı inceleme videosu. Ürünün kamera özellikleri, performansı ve kullanım deneyimini kapsamlı bir şekilde ele alan içerik bekliyoruz. Video en az 10 dakika uzunluğunda olmalı ve organik bir şekilde ürünü tanıtmalıdır.",
-        budget = "₺12,000",
-        deadline = "5 gün kaldı",
-        platforms = listOf("YouTube", "Instagram"),
-        requirements = listOf(
-            "Minimum 10K takipçi",
-            "Teknoloji içeriği üreticisi",
-            "Daha önce telefon incelemesi yaptı",
-            "Ortalama %5+ engagement oranı"
-        ),
-        deliverables = listOf(
-            "1 adet YouTube inceleme videosu (10+ dakika)",
-            "3 adet Instagram Reels",
-            "5 adet Instagram Story",
-            "Kampanya hashtag'lerini kullanma"
-        ),
-        progress = 0.65f
-    )
+    val uiState by vm.state.collectAsState()
 
-    val milestones = listOf(
-        Milestone(
-            title = "Kampanya Anlaşması",
-            date = "5 Ocak 2025",
-            isCompleted = true,
-            description = "Sözleşme imzalandı ve kampanya başlatıldı"
-        ),
-        Milestone(
-            title = "Ürün Teslimatı",
-            date = "8 Ocak 2025",
-            isCompleted = true,
-            description = "İnceleme ürünü teslim edildi"
-        ),
-        Milestone(
-            title = "İçerik Onayı",
-            date = "15 Ocak 2025",
-            isCompleted = true,
-            description = "Taslak içerik onaylandı"
-        ),
-        Milestone(
-            title = "Yayınlama",
-            date = "18 Ocak 2025",
-            isCompleted = false,
-            description = "İçeriğin yayınlanması bekleniyor"
-        ),
-        Milestone(
-            title = "Ödeme",
-            date = "25 Ocak 2025",
-            isCompleted = false,
-            description = "Kampanya ödemesi"
-        )
-    )
+    // Ekran açıldığında o ID'ye ait veriyi çek
+    LaunchedEffect(campaignId) {
+        vm.loadCampaign(campaignId)
+    }
 
     Scaffold(
         topBar = {
@@ -114,7 +46,7 @@ fun CampaignDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Share campaign */ }) {
+                    IconButton(onClick = { /* Share logic */ }) {
                         Icon(Icons.Default.Share, contentDescription = "Paylaş")
                     }
                 },
@@ -124,79 +56,107 @@ fun CampaignDetailScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(vertical = 16.dp)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // Header Card
-            item {
-                CampaignHeaderCard(campaign)
-            }
-
-            // Progress Section
-            item {
-                ProgressSection(campaign.progress)
-            }
-
-            // Quick Actions
-            item {
-                QuickActionsRow(onMessageClick)
-            }
-
-            // Description
-            item {
-                DetailSection(
-                    title = "Kampanya Açıklaması",
-                    icon = Icons.Default.Description
-                ) {
-                    Text(
-                        text = campaign.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
-            }
-
-            // Requirements
-            item {
-                DetailSection(
-                    title = "Gereksinimler",
-                    icon = Icons.Default.CheckCircle
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        campaign.requirements.forEach { requirement ->
-                            RequirementItem(requirement)
-                        }
+                uiState.error != null -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Hata: ${uiState.error}", color = MaterialTheme.colorScheme.error)
+                        Button(onClick = { vm.loadCampaign(campaignId) }) { Text("Tekrar Dene") }
                     }
                 }
-            }
+                uiState.campaign != null -> {
+                    val campaign = uiState.campaign!!
 
-            // Deliverables
-            item {
-                DetailSection(
-                    title = "Teslim Edilecekler",
-                    icon = Icons.Default.Assignment
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        campaign.deliverables.forEach { deliverable ->
-                            DeliverableItem(deliverable)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 16.dp)
+                    ) {
+                        // Header Card
+                        item {
+                            CampaignHeaderCard(campaign)
                         }
-                    }
-                }
-            }
 
-            // Milestones
-            item {
-                DetailSection(
-                    title = "Kilometre Taşları",
-                    icon = Icons.Default.Timeline
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        milestones.forEach { milestone ->
-                            MilestoneItem(milestone)
+                        // Progress Section
+                        item {
+                            ProgressSection(campaign.progress)
+                        }
+
+                        // Quick Actions
+                        item {
+                            QuickActionsRow(onMessageClick)
+                        }
+
+                        // Description
+                        item {
+                            DetailSection(
+                                title = "Kampanya Açıklaması",
+                                icon = Icons.Default.Description
+                            ) {
+                                Text(
+                                    text = campaign.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Requirements
+                        if (campaign.requirements.isNotEmpty()) {
+                            item {
+                                DetailSection(
+                                    title = "Gereksinimler",
+                                    icon = Icons.Default.CheckCircle
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        campaign.requirements.forEach { requirement ->
+                                            RequirementItem(requirement)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Deliverables
+                        if (campaign.deliverables.isNotEmpty()) {
+                            item {
+                                DetailSection(
+                                    title = "Teslim Edilecekler",
+                                    icon = Icons.Default.Assignment
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        campaign.deliverables.forEach { deliverable ->
+                                            DeliverableItem(deliverable)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Milestones
+                        if (campaign.milestones.isNotEmpty()) {
+                            item {
+                                DetailSection(
+                                    title = "Kilometre Taşları",
+                                    icon = Icons.Default.Timeline
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                        campaign.milestones.forEach { milestone ->
+                                            MilestoneItem(milestone)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -206,7 +166,7 @@ fun CampaignDetailScreen(
 }
 
 @Composable
-private fun CampaignHeaderCard(campaign: CampaignDetail) {
+private fun CampaignHeaderCard(campaign: Campaign) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -244,7 +204,7 @@ private fun CampaignHeaderCard(campaign: CampaignDetail) {
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = campaign.advertiser,
+                            text = campaign.advertiserName.ifBlank { "Marka" },
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
@@ -253,7 +213,7 @@ private fun CampaignHeaderCard(campaign: CampaignDetail) {
                         onClick = { },
                         label = {
                             Text(
-                                text = campaign.status,
+                                text = campaign.status.uppercase(),
                                 style = MaterialTheme.typography.labelMedium
                             )
                         },
@@ -272,23 +232,26 @@ private fun CampaignHeaderCard(campaign: CampaignDetail) {
                 ) {
                     InfoChip(
                         icon = Icons.Default.AccountBalanceWallet,
-                        label = campaign.budget,
+                        label = "₺${campaign.budget}",
                         modifier = Modifier.weight(1f)
                     )
                     InfoChip(
                         icon = Icons.Default.Schedule,
-                        label = campaign.deadline,
+                        label = campaign.deadlineText.ifBlank { "-" },
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Platformlar (Listeden veya tekil alandan)
+                val displayPlatforms = if (campaign.platforms.isNotEmpty()) campaign.platforms else listOf(campaign.platform)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    campaign.platforms.forEach { platform ->
+                    displayPlatforms.filter { it.isNotBlank() }.forEach { platform ->
                         AssistChip(
                             onClick = { },
                             label = { Text(platform, style = MaterialTheme.typography.labelSmall) },
@@ -303,6 +266,8 @@ private fun CampaignHeaderCard(campaign: CampaignDetail) {
         }
     }
 }
+
+// Yardımcı Composable'lar (Aynı Kalabilir)
 
 @Composable
 private fun InfoChip(

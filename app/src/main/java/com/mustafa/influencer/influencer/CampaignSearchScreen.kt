@@ -3,6 +3,7 @@ package com.mustafa.influencer.influencer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,14 +25,37 @@ fun CampaignSearchScreen(
     onCampaignClick: (String) -> Unit = {},
     vm: CampaignSearchViewModel = viewModel()
 ) {
-    val ui by vm.state.collectAsState()
+    // 1. State'i dinliyoruz
+    val uiState by vm.state.collectAsState()
 
-    // Kategori chipleri: Firestore’daki kategoriler farklıysa burada aynı isimleri kullan
+    // 2. Sayfa açılınca verileri yenile
+    LaunchedEffect(Unit) {
+        vm.refresh()
+    }
+
+    // 3. FİLTRELEME MANTIĞINI BURAYA ALDIK (ViewModel'e güvenmiyoruz)
+    // uiState her değiştiğinde bu blok yeniden hesaplanır.
+    val filteredList = remember(uiState.all, uiState.searchQuery, uiState.selectedCategory) {
+        if (uiState.all.isEmpty()) {
+            emptyList()
+        } else {
+            val query = uiState.searchQuery.trim()
+            uiState.all.filter { campaign ->
+                // Kategori Eşleşmesi
+                val isCategoryMatch = if (uiState.selectedCategory == "Tümü") true
+                else campaign.category.equals(uiState.selectedCategory, ignoreCase = true)
+
+                // Arama Eşleşmesi (Başlık veya Marka Adı)
+                val isSearchMatch = if (query.isEmpty()) true
+                else (campaign.title.contains(query, ignoreCase = true) ||
+                        campaign.advertiserName.contains(query, ignoreCase = true))
+
+                isCategoryMatch && isSearchMatch
+            }
+        }
+    }
+
     val categories = listOf("Tümü", "Teknoloji", "Oyun", "Makyaj", "Spor", "Yemek", "Moda", "Seyahat", "Eğitim")
-
-    LaunchedEffect(Unit) { vm.refresh() }
-
-    val filtered = remember(ui.all, ui.searchQuery, ui.selectedCategory) { vm.filtered() }
 
     Scaffold(
         topBar = {
@@ -50,43 +74,75 @@ fun CampaignSearchScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(vertical = 16.dp)
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
+            // --- DEBUG BÖLÜMÜ (Veriler gelince kaldırabilirsin) ---
+            item {
+                if (uiState.all.isNotEmpty() && filteredList.isEmpty()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+                        Column(Modifier.padding(10.dp)) {
+                            Text("⚠️ DEBUG BİLGİSİ:", fontWeight = FontWeight.Bold, color = Color.Red)
+                            Text("Firebase'den Gelen: ${uiState.all.size} adet")
+                            Text("Filtre Sonrası: 0 adet")
+                            Text("Seçili Kategori: '${uiState.selectedCategory}'")
+                            Text("Aranan Kelime: '${uiState.searchQuery}'")
+
+                            // İlk verinin neden elendiğini gösterelim
+                            val ornek = uiState.all.first()
+                            Text("--- İlk Veri Analizi ---")
+                            Text("Başlık: ${ornek.title}")
+                            Text("Kategori: '${ornek.category}'")
+
+                            val catMatch = (uiState.selectedCategory == "Tümü" || ornek.category.equals(uiState.selectedCategory, true))
+                            Text("Kategori Tutuyor mu?: $catMatch")
+                        }
+                    }
+                }
+            }
+            // -----------------------------------------------------
+
+            // Arama Çubuğu
             item {
                 OutlinedTextField(
-                    value = ui.searchQuery,
+                    value = uiState.searchQuery,
                     onValueChange = vm::setQuery,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    placeholder = { Text("Kampanya veya advertiser ara...") },
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    placeholder = { Text("Kampanya veya marka ara...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
-                        if (ui.searchQuery.isNotEmpty()) {
+                        if (uiState.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { vm.setQuery("") }) {
                                 Icon(Icons.Default.Clear, contentDescription = "Temizle")
                             }
                         }
                     },
                     shape = RoundedCornerShape(16.dp),
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             }
 
+            // Kategoriler
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Çok uzamasın diye ilk 6
-                    categories.take(6).forEach { cat ->
+                    items(categories) { cat ->
                         FilterChip(
-                            selected = ui.selectedCategory == cat,
+                            selected = uiState.selectedCategory == cat,
                             onClick = { vm.setCategory(cat) },
                             label = { Text(cat) },
-                            leadingIcon = if (ui.selectedCategory == cat) {
+                            leadingIcon = if (uiState.selectedCategory == cat) {
                                 { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                             } else null
                         )
@@ -94,37 +150,29 @@ fun CampaignSearchScreen(
                 }
             }
 
+            // Yükleniyor
             item {
-                if (ui.isLoading) {
-                    Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                if (uiState.isLoading) {
+                    Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
-                if (ui.errorMessage.isNotBlank()) {
+            }
+
+            // Sonuç Sayısı
+            item {
+                if (!uiState.isLoading && uiState.errorMessage.isBlank()) {
                     Text(
-                        text = ui.errorMessage,
-                        color = MaterialTheme.colorScheme.error,
+                        text = "${filteredList.size} kampanya bulundu",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
-                    OutlinedButton(
-                        onClick = vm::refresh,
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    ) {
-                        Text("Tekrar dene")
-                    }
                 }
             }
 
-            item {
-                Text(
-                    text = "${filtered.size} kampanya bulundu",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                )
-            }
-
-            items(filtered) { campaign ->
+            // Liste
+            items(filteredList) { campaign ->
                 CampaignCard(
                     campaign = campaign,
                     onClick = { onCampaignClick(campaign.id) }
@@ -145,6 +193,7 @@ private fun CampaignCard(
             .padding(horizontal = 20.dp, vertical = 8.dp),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         onClick = onClick
     ) {
         Column(
@@ -165,7 +214,7 @@ private fun CampaignCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = campaign.advertiserName.ifBlank { "Advertiser" },
+                        text = campaign.advertiserName.ifBlank { "Marka" },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -174,18 +223,25 @@ private fun CampaignCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
-                text = campaign.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
+            if (campaign.description.isNotBlank()) {
+                Text(
+                    text = campaign.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(onClick = { }, label = { Text(campaign.platform) })
-                AssistChip(onClick = { }, label = { Text(campaign.category) })
+                if (campaign.platform.isNotBlank()) {
+                    AssistChip(
+                        onClick = { },
+                        label = { Text(campaign.platform) },
+                        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
+                AssistChip(onClick = { }, label = { Text(campaign.category.ifBlank { "Genel" }) })
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -206,7 +262,7 @@ private fun CampaignCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = campaign.deadlineText.ifBlank { "-" },
