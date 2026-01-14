@@ -6,13 +6,17 @@ import com.mustafa.influencer.domain.repository.CampaignRepository
 import com.mustafa.influencer.shared.FirebaseManager
 
 class CampaignRepositoryImpl(
-    // DataSource otomatik initialize edilir
     private val ds: CampaignDataSource = CampaignDataSource()
 ) : CampaignRepository {
 
     override suspend fun listActiveCampaigns(): List<Campaign> = ds.listActiveCampaigns()
 
     override suspend fun getCampaign(id: String): Campaign = ds.getCampaign(id)
+
+    // --- YENİ EKLENEN ---
+    override suspend fun getCampaignsByAdvertiser(advertiserId: String): List<Campaign> {
+        return ds.getCampaignsByAdvertiser(advertiserId)
+    }
 
     override suspend fun createCampaign(
         title: String,
@@ -23,12 +27,11 @@ class CampaignRepositoryImpl(
         deadlineText: String,
         status: String
     ): String {
-        // Kullanıcı ID'sini kontrol et
-        val uid = FirebaseManager.getCurrentUserId() ?: throw IllegalStateException("Kullanıcı oturumu açık değil")
+        val uid = FirebaseManager.getCurrentUserId() ?: error("Oturum yok")
 
         val data = mapOf(
             "advertiserId" to uid,
-            "advertiserName" to "", // İleride kullanıcı profilinden çekilebilir
+            "advertiserName" to "",
             "title" to title.trim(),
             "description" to description.trim(),
             "platform" to platform,
